@@ -1,0 +1,109 @@
+---
+title: "pp-01"
+author: "SJTW"
+date: "12/20/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache =TRUE)
+```
+
+## Phenotypic analyses between Early and Late isolates
+
+Below is the raw code used to generate Figure 5.2. During the research the names of samples were changed to simplified A1-A4 and M1-11 based on their genetic similarity. It was decided to revert names back to their glycerol repository ID's to make tracing them easier in the future. The names are different due to this change in names. 
+
+```{r}
+
+require(data.table)
+require(Rmisc)
+require(sleuth)
+require(egg)
+require(ggplot2)
+
+read.csv("~/PVD_grnml")
+
+PVDgr_pat01_avz <- summarySE(PVD_grnml, measurevar="grwnrml", groupvars=c("alt_name", "Ggroup"))
+PVDgr_pat01_plt_alt <- ggplot(PVDgr_pat01_avz, aes(x=alt_name, y=grwnrml, fill=Ggroup)) + 
+  theme_classic()+ geom_bar(stat = "identity", color="black") + 
+  geom_errorbar(aes(ymin=grwnrml-se, ymax=grwnrml+se), width=.1) +
+  geom_point(data=PVD_grnml, aes(y=grwnrml, x=alt_name), color="black") + 
+  scale_fill_manual(values = c("#EF8961","#66A8CE"))+
+  scale_x_discrete(limits= c("A01","A02","A03","A04","M06","M01","M08","M09","M07","M10","M04","M03","M11","M02","M05","PAO1"))
+PVDgr_pat01_plt_alt
+
+read.csv("~/SCFM_only")
+SCFM_only_alt <- SCFM_only[SCFM_only$Group %in% c("2.Ancestral", "3.Modern")]
+SCFM_pat01_plt_alt <- ggplot(SCFM_pat01_avz_alt, aes(x=alt_name, y=AUC_SCFM, fill=Group)) + 
+  theme_classic()+ geom_bar(stat = "identity", color="black") + 
+  geom_errorbar(aes(ymin=AUC_SCFM-se, ymax=AUC_SCFM+se), width=.1) +
+  geom_point(data=SCFM_only_alt, aes(y=AUC_SCFM, x=alt_name), color="black") + 
+  scale_fill_manual(values = c("#EF8961", "#66A8CE")) +
+  scale_y_continuous(limits = c(0,1400), breaks=c(0,200,400,600,800,1000,1200,1400), labels = c(0,200,400,600,800,1000,1200,1400))
+SCFM_pat01_plt_alt
+
+read.csv("~/LB_growth")
+LB_growth_alt <- LB_growth[LB_growth$Group %in% c("2.Ancestral", "3.Modern"),]
+LB_pat01_plt_alt <- ggplot(LB_pat01_avz_alt, aes(x=alt_name, y=AUC_LB, fill=Group)) + 
+  theme_classic()+ geom_bar(stat = "identity", color="black") + 
+  geom_errorbar(aes(ymin=AUC_LB-se, ymax=AUC_LB+se), width=.1) +
+  geom_point(data=LB_growth_alt, aes(y=AUC_LB, x=alt_name), color="black") + 
+  scale_fill_manual(values = c("#EF8961", "#66A8CE")) +
+  scale_y_continuous(limits = c(0,1000), breaks=c(0,200,400,600,800,1000), labels = c(0,200,400,600,800,1000))
+LB_pat01_plt_alt
+
+read.csv("~/biofilm_norm")
+biofilm_norm_alt <- biofilm_norm[biofilm_norm$class %in% c("2.Ancestral", "3.Modern"),]
+BIOFILM_pat01_plt_alt <- ggplot(BIOFILM_pat01_avz_alt, aes(x=alt_name, y=averages, fill=class)) + 
+  theme_classic()+ geom_bar(stat = "identity", color="black") + 
+  geom_errorbar(aes(ymin=averages-se, ymax=averages+se), width=.1) +
+  geom_point(data=biofilm_norm_alt, aes(y=averages, x=alt_name), color="black") + 
+  scale_fill_manual(values = c("#EF8961", "#66A8CE"))
+BIOFILM_pat01_plt_alt
+
+read.csv("~/motil2018")
+motil2018_alt <- motil2018[motil2018$Group %in% c("2.Ancestral", "3.Modern"),]
+
+MOTILITY_pat01_plt_alt <- ggplot(MOTILITY_pat01_avz_alt, aes(x=alt_name, y=area_cor, fill=Group)) + 
+  theme_classic()+ geom_bar(stat = "identity", color="black") + 
+  geom_errorbar(aes(ymin=area_cor-se, ymax=area_cor+se), width=.1) +
+  geom_point(data=motil2018_alt, aes(y=area_cor, x=alt_name), color="black") + 
+  scale_fill_manual(values = c("#EF8961", "#66A8CE"))
+MOTILITY_pat01_plt_alt
+
+ggarrange(SCFM_pat01_plt_alt,LB_pat01_plt_alt,BIOFILM_pat01_plt_alt,MOTILITY_pat01_plt_alt,PVDgr_pat01_plt_alt, ncol = 1)
+
+```
+
+
+
+## RNAseq analysis using Sleuth
+
+RNAseq analysis using sleuth was carried out using R. Because sleuth utilises Rshiny, it does not display outputs correctly through R markdown. However, below are the codes run using sleuth to perform a differential gene expression analysis between L-001-1C and E-S2239-16. Heatmaps, PCA analysis, volcano and MA plots were all generated within the shiny applet of sleuth and exported within sleuth.
+
+```{r}
+require(ggplot2)
+require(data.table)
+require(Rmisc)
+require(sleuth)
+require(dplyr)
+kal_dirzalt <- file.path("~", "patient001_RNA/kallistoQUANTalt", sample_ids)
+kalPAT01alt <- dplyr::select(conDIT, sample = sample, genotype = genotype)
+kalPAT01alt <- dplyr::mutate(kalPAT01, path = kal_dirzalt)
+
+so2 <- sleuth_prep(kalPAT01alt, extra_bootstrap_summary = TRUE, target_mapping = t2g, read_bootstrap_tpm = TRUE)
+
+so2 <- sleuth_fit(so2, ~genotype, 'full')
+so2 <- sleuth_fit(so2, ~1, 'reduced')
+so2 <- sleuth_lrt(so2, 'reduced', 'full')
+so2 <- sleuth_wt(so2, 'genotypemod', which_model = "full")
+models(so2)
+sleuth_table <- sleuth_results(so2, 'reduced:full', 'lrt', show_all = FALSE)
+sleuth_significant <- dplyr::filter(sleuth_table, qval <= 0.05)
+
+```
+
+
